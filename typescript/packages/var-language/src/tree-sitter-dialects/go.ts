@@ -58,6 +58,7 @@ function decodeEscape(text: string): string {
   const body = text.slice(1) // drop the leading backslash
   const simple = decodeSimpleOrHexEscape(body, SIMPLE_ESCAPES)
   if (simple !== undefined) return simple
+  /* jscpd:ignore-start — \u/\U/octal forms coincide with python.ts; per-dialect on purpose */
   if (body.startsWith('u') && body.length === 5) {
     return String.fromCodePoint(Number.parseInt(body.slice(1), 16))
   }
@@ -67,6 +68,7 @@ function decodeEscape(text: string): string {
   if (/^[0-7]{3}$/.test(body)) {
     return String.fromCodePoint(Number.parseInt(body, 8))
   }
+  /* jscpd:ignore-end */
   // Unknown escape: keep the character, drop the backslash.
   return body
 }
@@ -95,7 +97,8 @@ function decodeString(node: Node): string {
 /* jscpd:ignore-start — shared param-extraction shape; per-dialect on purpose */
 function extractHandlerParams(handlerNode: Node): HandlerParams | undefined {
   const parameters = handlerNode.childForFieldName('parameters')
-  const decls = parameters?.namedChildren.filter((p): p is Node => p?.type === 'parameter_declaration') ?? []
+  const decls =
+    parameters?.namedChildren.filter((p): p is Node => p?.type === 'parameter_declaration') ?? []
   const structured: HandlerParam[] = []
   let first: Node | undefined
   let last: Node | undefined
