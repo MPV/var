@@ -4,9 +4,130 @@ package varcore
 // compared against conformance/bundles/*/golden/*.json. Port of conformance.py /
 // conformance.ts. Artifacts are built from map[string]any / []any so
 // CanonicalStringify inherits encoding/json's recursive map-key sort.
-//
-// Staged like the reference: ToVarDocArtifact (parse) first; ToRegistryArtifact,
-// ToPlanArtifact, and RunConformance (trace) are added as their stages land.
+
+import (
+	"path/filepath"
+	"strings"
+)
+
+// fileStem returns the file stem: "path/to/foo.steps.go" -> "foo.steps". Port of
+// _file_stem / fileStem — strips the final extension so a step-def file
+// serializes identically across every language's fixture.
+func fileStem(path string) string {
+	base := filepath.Base(path)
+	return strings.TrimSuffix(base, filepath.Ext(base))
+}
+
+// toFailureArtifact projects an execution error to a FailureArtifact dict. Port
+// of to_failure_artifact / toFailureArtifact. line and anchor are deterministic
+// source positions (never scraped from a stack), so every port reproduces them.
+func toFailureArtifact(err error, matchSpan Span) map[string]any {
+	line := matchSpan.StartLine
+	anchor := spanMap(failureAnchor(err, matchSpan))
+	if c, ok := isCellMismatchError(err); ok {
+		cells := make([]any, 0)
+		for _, cell := range c.Cells {
+			if !cell.OK {
+				cells = append(cells, map[string]any{
+					"column":   cell.Column,
+					"expected": cell.Expected,
+					"actual":   cell.Actual,
+					"span":     spanMap(cell.Span),
+				})
+			}
+		}
+		return map[string]any{"kind": "cell-mismatch", "line": line, "anchor": anchor, "cells": cells}
+	}
+	if d, ok := isDocStringMismatchError(err); ok {
+		return map[string]any{
+			"kind": "doc-string-mismatch", "line": line, "anchor": anchor,
+			"diff": map[string]any{
+				"expected": d.Diff.Expected,
+				"actual":   d.Diff.Actual,
+				"span":     spanMap(d.Diff.Span),
+			},
+		}
+	}
+	if _, ok := err.(*ReturnShapeError); ok {
+		return map[string]any{"kind": "return-shape", "line": line, "anchor": anchor}
+	}
+	if isUnexpectedPassError(err) {
+		return map[string]any{"kind": "unexpected-pass", "line": line, "anchor": anchor}
+	}
+	return map[string]any{"kind": "thrown", "line": line, "anchor": anchor}
+}
+
+// RunConformance runs all examples and returns the trace artifact. Port of
+// run_conformance / runConformance — the trace is built inline from recorded
+// step observations (there is no separate toTraceArtifact).
+func RunConformance(varDoc VarDoc, registry Registry, createContext func(string) any) (map[string]any, error) {
+	plan, err := BuildPlan(varDoc, registry)
+	if err != nil {
+		return nil, err
+	}
+
+	traceExamples := make([]any, 0)
+	for _, ex := range plan.Examples {
+		obs := make([]StepObservation, 0)
+		runErr := executeExample(plan, ex, createContext, func(o StepObservation) {
+			obs = append(obs, o)
+		})
+		outcome := "pass"
+		if runErr != nil {
+			outcome = "fail"
+		}
+
+		steps := make([]any, len(ex.Steps))
+		for i, step := range ex.Steps {
+			ordinal := i + 1
+			var chosen *StepObservation
+			var last *StepObservation
+			for j := range obs {
+				if obs[j].Ordinal == ordinal {
+					last = &obs[j]
+					if obs[j].Outcome == "fail" {
+						chosen = &obs[j]
+						break
+					}
+				}
+			}
+			if chosen == nil {
+				chosen = last
+			}
+			stepOutcome := "skipped"
+			if chosen != nil {
+				stepOutcome = chosen.Outcome
+			}
+			stepDict := map[string]any{
+				"exampleName":       ex.Name,
+				"ordinal":           ordinal,
+				"stepText":          step.Text,
+				"matchedExpression": step.StepDef.Expression,
+				"contextKey": map[string]any{
+					"exampleName": ex.Name,
+					"stepFile":    fileStem(step.StepDef.ExpressionSourceFile),
+				},
+				"outcome": stepOutcome,
+			}
+			if stepOutcome == "fail" {
+				var e error
+				if chosen != nil {
+					e = chosen.Err
+				}
+				stepDict["failure"] = toFailureArtifact(e, step.MatchSpan)
+			}
+			steps[i] = stepDict
+		}
+
+		traceExamples = append(traceExamples, map[string]any{
+			"name":    ex.Name,
+			"outcome": outcome,
+			"steps":   steps,
+		})
+	}
+
+	return map[string]any{"examples": traceExamples}, nil
+}
 
 // ToRegistryArtifact projects a Registry to the wire dict for the registry
 // artifact. Port of to_registry_artifact / toRegistryArtifact. parameterTypeNames
