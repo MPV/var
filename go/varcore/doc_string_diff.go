@@ -41,6 +41,11 @@ func (e *DocStringMismatchError) Error() string {
 	return fmt.Sprintf("doc string: expected %q but was %q", e.Diff.Expected, e.Diff.Actual)
 }
 
+// AsDocStringMismatch reports whether err is a DocStringMismatchError (for adapters).
+func AsDocStringMismatch(err error) (*DocStringMismatchError, bool) {
+	return isDocStringMismatchError(err)
+}
+
 func isDocStringMismatchError(e error) (*DocStringMismatchError, bool) {
 	var d *DocStringMismatchError
 	if e != nil && errors.As(e, &d) {

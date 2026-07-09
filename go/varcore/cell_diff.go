@@ -66,11 +66,23 @@ func isCellMismatchError(e error) (*CellMismatchError, bool) {
 	return nil, false
 }
 
+// AsCellMismatch reports whether err is a CellMismatchError (for adapters).
+func AsCellMismatch(err error) (*CellMismatchError, bool) { return isCellMismatchError(err) }
+
 // ReturnShapeError signals the step returned the wrong type or shape — an author
 // mistake, not a value diff.
 type ReturnShapeError struct{ Message string }
 
 func (e *ReturnShapeError) Error() string { return e.Message }
+
+// AsReturnShape reports whether err is a ReturnShapeError (for adapters).
+func AsReturnShape(err error) (*ReturnShapeError, bool) {
+	var r *ReturnShapeError
+	if err != nil && errors.As(err, &r) {
+		return r, true
+	}
+	return nil, false
+}
 
 // compareRow compares a row step's returned map against the row's cells. Only
 // columns present on returned are checked. A non-map (or nil) return checks

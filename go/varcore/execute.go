@@ -81,6 +81,31 @@ func convertArg(v any, t reflect.Type) reflect.Value {
 	return rv
 }
 
+// QueuedExample is a named, runnable example for the runner/adapter. Run
+// executes it and returns the final error (nil = pass), with expected-failure
+// inversion already applied.
+type QueuedExample struct {
+	Name string
+	Run  func() error
+}
+
+// CollectExamples returns one QueuedExample per planned example, in order. Port
+// of collect_examples — the entry point the runner and test-framework adapter
+// drive (they don't need the per-step observations the trace uses).
+func CollectExamples(plan ExecutionPlan, createContext func(string) any) []QueuedExample {
+	out := make([]QueuedExample, len(plan.Examples))
+	for i, ex := range plan.Examples {
+		ex := ex
+		out[i] = QueuedExample{
+			Name: ex.Name,
+			Run: func() error {
+				return executeExample(plan, ex, createContext, func(StepObservation) {})
+			},
+		}
+	}
+	return out
+}
+
 // executeExample runs one planned example, emitting a StepObservation per step,
 // and returns the example's final error (nil = pass), with expected-failure
 // inversion applied. Port of the run() closure in execute_plan.
