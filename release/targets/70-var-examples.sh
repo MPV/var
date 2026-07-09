@@ -53,6 +53,7 @@ rsync -a --copy-links \
   --exclude '.pytest_cache/' \
   --exclude 'uv.lock' \
   --exclude 'Gemfile.lock' \
+  --exclude 'go.sum' \
   examples/ "$DEST"/
 
 # Pin the JVM samples to the released Maven Central artifacts (idempotent even
@@ -84,6 +85,15 @@ perl -pi -e "s/\"(pytest-var|oselvar-var[\\w-]*)\"/\"\$1==$VERSION\"/" \
 # (above), so `bundle install` regenerates it against the pins.
 perl -pi -e "s|, path: \"\\.\\./\\.\\./ruby/packages/[\\w-]+\"|, \"$VERSION\"|" \
   "$DEST"/ruby-*/Gemfile
+
+# Pin the Go sample to the released module: drop the local `replace` (which
+# points at ../../go in the monorepo) and pin the require to the tagged version.
+# `go get github.com/oselvar/var/go@v<version>` resolves the go/ submodule at
+# its `go/v<version>` tag. go.sum is excluded from the sync (above), so a fresh
+# `go mod tidy` / `go test` regenerates it against the pin.
+perl -ni -e 'print unless m{^replace github\.com/oselvar/var/go }' "$DEST"/go-testing/go.mod
+perl -pi -e "s{^require github\.com/oselvar/var/go .*}{require github.com/oselvar/var/go v$VERSION}" \
+  "$DEST"/go-testing/go.mod
 
 git -C "$DEST" add -A
 if git -C "$DEST" diff --cached --quiet; then
