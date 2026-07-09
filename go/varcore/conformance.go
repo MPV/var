@@ -8,6 +8,36 @@ package varcore
 // Staged like the reference: ToVarDocArtifact (parse) first; ToRegistryArtifact,
 // ToPlanArtifact, and RunConformance (trace) are added as their stages land.
 
+// ToRegistryArtifact projects a Registry to the wire dict for the registry
+// artifact. Port of to_registry_artifact / toRegistryArtifact. parameterTypeNames
+// come from the expression text (see parameterTypeNames); custom parameter types
+// serialize as {name, regexp}.
+func ToRegistryArtifact(r Registry) map[string]any {
+	steps := make([]any, len(r.Steps))
+	for i, s := range r.Steps {
+		names := parameterTypeNames(s.Expression)
+		nameList := make([]any, len(names))
+		for j, n := range names {
+			nameList[j] = n
+		}
+		steps[i] = map[string]any{
+			"expression":         s.Expression,
+			"parameterTypeNames": nameList,
+		}
+	}
+	paramTypes := make([]any, len(r.CustomParamTypes))
+	for i, p := range r.CustomParamTypes {
+		paramTypes[i] = map[string]any{
+			"name":   p.Name,
+			"regexp": p.Regexp,
+		}
+	}
+	return map[string]any{
+		"steps":          steps,
+		"parameterTypes": paramTypes,
+	}
+}
+
 func spanMap(s Span) map[string]any {
 	return map[string]any{
 		"startOffset": s.StartOffset,
