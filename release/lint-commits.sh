@@ -21,7 +21,7 @@ CC_RE="^($TYPES)(\\(([^)]+)\\))?(!)?: .+$"
 # decides which consumer section the entry lands in, so it must be one of
 # these (optionally `/package`, e.g. ts/var-vitest). Work that ships nothing
 # to a consumer (website, CI, tooling) is a chore/docs/build commit instead.
-CONSUMER_SCOPE='^(ts|py|java|ruby|vscode|spec)(/[a-z0-9._-]+)?$'
+CONSUMER_SCOPE='^(ts|py|java|ruby|go|vscode|spec)(/[a-z0-9._-]+)?$'
 
 # Non-conventional commits already on main (pre-convention, or slipped in via
 # a merged PR) — exempted because pushed history can't be reworded.
@@ -50,7 +50,7 @@ while IFS=$'\t' read -r sha subject; do
   [[ -z "$breaking" ]] && git log -1 --format=%b "$sha" | grep -q '^BREAKING[- ]CHANGE:' && breaking=1
   if [[ "$type" =~ ^(feat|fix|perf)$ || -n "$breaking" ]]; then
     [[ "$scope" =~ $CONSUMER_SCOPE ]] ||
-      complain "changelog-visible commit needs a consumer scope (ts|py|java|ruby|vscode|spec, e.g. ts/var-vitest) — or use chore:/docs: if nothing shipped changes" "$short" "$subject"
+      complain "changelog-visible commit needs a consumer scope (ts|py|java|ruby|go|vscode|spec, e.g. ts/var-vitest) — or use chore:/docs: if nothing shipped changes" "$short" "$subject"
   fi
 done < <(git log --no-merges --format=$'%H\t%s' "$RANGE")
 

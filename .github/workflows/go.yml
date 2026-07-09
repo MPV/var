@@ -1,0 +1,48 @@
+name: Go
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'go/**'
+      - 'conformance/**'
+      - 'examples/**'
+      - 'go.work'
+      - '.github/workflows/go.yml'
+  pull_request:
+    paths:
+      - 'go/**'
+      - 'conformance/**'
+      - 'examples/**'
+      - 'go.work'
+      - '.github/workflows/go.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: go/go.sum
+
+      # gofmt must be clean across both workspace modules.
+      - run: test -z "$(gofmt -l go conformance)" || { gofmt -l go conformance; exit 1; }
+
+      - run: go vet ./...
+        working-directory: go
+
+      - run: go test ./...
+        working-directory: go
+
+      # The four-artifact conformance harness (needs the workspace fixtures).
+      - run: go test ./...
+        working-directory: conformance
+
+      # Standalone sample project (see examples/go-testing) — a consumer, not a
+      # workspace member, so GOWORK=off makes it resolve var/go via its replace.
+      - run: GOWORK=off go test ./...
+        working-directory: examples/go-testing

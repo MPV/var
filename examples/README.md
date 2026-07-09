@@ -20,6 +20,7 @@ whole team, and checked against the code on every test run.
 | [`python-unittest`](python-unittest) | Python + unittest | `uv run python -m unittest` | [![python-unittest](https://github.com/oselvar/var-examples/actions/workflows/python-unittest.yml/badge.svg)](https://github.com/oselvar/var-examples/actions/workflows/python-unittest.yml) |
 | [`ruby-rspec`](ruby-rspec) | Ruby + RSpec | `bundle exec rspec` | [![ruby-rspec](https://github.com/oselvar/var-examples/actions/workflows/ruby-rspec.yml/badge.svg)](https://github.com/oselvar/var-examples/actions/workflows/ruby-rspec.yml) |
 | [`ruby-minitest`](ruby-minitest) | Ruby + Minitest | `bundle exec rake test` | [![ruby-minitest](https://github.com/oselvar/var-examples/actions/workflows/ruby-minitest.yml/badge.svg)](https://github.com/oselvar/var-examples/actions/workflows/ruby-minitest.yml) |
+| [`go-testing`](go-testing) | Go + `go test` | `go test ./...` | [![go-testing](https://github.com/oselvar/var-examples/actions/workflows/go-testing.yml/badge.svg)](https://github.com/oselvar/var-examples/actions/workflows/go-testing.yml) |
 
 `typescript-vitest` implements the full example set; the other projects
 implement a feature-covering subset — `hello-var` (basic steps),

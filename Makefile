@@ -10,13 +10,16 @@
 #   make ruby       # bundle + rake (rubocop + rspec + purity gate) +
 #                   # examples/ruby-rspec and examples/ruby-minitest (Ruby 3.2,
 #                   # pinned in ruby/.tool-versions)
+#   make go         # gofmt + go vet + go test (varcore/varconfig/varrunner/
+#                   # vartesting), the four-artifact conformance harness, and
+#                   # examples/go-testing (Go 1.24; go.work joins go/ + conformance/)
 #   make coverage   # test with coverage in all four ports (reports below)
 #
 # Each target runs the same gate as that port's CI workflow in .github/workflows/.
 
-.PHONY: check commits typescript python java ruby coverage changelog prepare release
+.PHONY: check commits typescript python java ruby go coverage changelog prepare release
 
-check: commits typescript python java ruby
+check: commits typescript python java ruby go
 
 # Commits since the last release tag must be conventional (they drive the
 # changelog and the version bump — see cliff.toml and CLAUDE.md).
@@ -47,6 +50,15 @@ ruby:
 	cd ruby && bundle install && bundle exec rake
 	cd examples/ruby-rspec && bundle install && bundle exec rspec
 	cd examples/ruby-minitest && bundle install && bundle exec rake test
+
+# gofmt must be clean, then vet + tests in both workspace modules and the sample.
+go:
+	test -z "$$(gofmt -l go conformance)" || { gofmt -l go conformance; exit 1; }
+	cd go && go vet ./... && go test ./...
+	cd conformance && go test ./...
+	# The sample is a standalone consumer (not a workspace member), so it runs
+	# with the workspace disabled, resolving var/go via its own replace directive.
+	cd examples/go-testing && GOWORK=off go test ./...
 
 # Coverage reports: typescript/coverage/index.html, python/htmlcov/index.html,
 # java/<module>/target/site/jacoco/index.html (jacoco runs on every verify),

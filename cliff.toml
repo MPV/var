@@ -68,6 +68,7 @@ body = """
 {{- self::section(title="Python (PyPI)", key="py", commits=commits) }}
 {{- self::section(title="Java & Kotlin (Maven Central)", key="java", commits=commits) }}
 {{- self::section(title="Ruby (RubyGems)", key="ruby", commits=commits) }}
+{{- self::section(title="Go (Go modules)", key="go", commits=commits) }}
 {{- self::section(title="VS Code extension (Marketplace & Open VSX)", key="vscode", commits=commits) }}
 {{- self::section(title="Specification (all ports)", key="spec", commits=commits) }}
 """
