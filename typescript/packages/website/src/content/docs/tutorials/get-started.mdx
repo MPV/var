@@ -130,6 +130,22 @@ Every command and code sample below follows that choice.
        end
        ```
      </TabItem>
+     <TabItem label="Go">
+       ```go
+       package examples
+
+       import "github.com/oselvar/var/go/oselvar"
+
+       type Ctx struct{}
+
+       func Steps() {
+       	r := oselvar.DefineState[Ctx]()
+       	r.Sensor("life, the universe and everything is {int}", func(c Ctx, answer int) int {
+       		return 42
+       	})
+       }
+       ```
+     </TabItem>
    </Tabs>
 
    <Aside type="note" title="Java & Kotlin: two extra steps">
@@ -197,6 +213,13 @@ Every command and code sample below follows that choice.
      <TabItem label="Ruby">
        ```ruby
        sensor('life, the universe and everything is {int}') { 43 }
+       ```
+     </TabItem>
+     <TabItem label="Go">
+       ```go
+       r.Sensor("life, the universe and everything is {int}", func(c Ctx, answer int) int {
+       	return 43
+       })
        ```
      </TabItem>
    </Tabs>

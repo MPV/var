@@ -70,6 +70,16 @@ sensors, rather than reaching inside it.
     end
     ```
   </TabItem>
+  <TabItem label="Go">
+    ```go
+    type Ctx struct{ Total int }
+
+    r := oselvar.DefineState[Ctx]()
+
+    r.Stimulus("I add {int}", func(c Ctx, n int) Ctx { return Ctx{Total: c.Total + n} })
+    r.Sensor("the total is {int}", func(c Ctx, expected int) int { return c.Total })
+    ```
+  </TabItem>
 </Tabs>
 
 In your prose the sensor is the *outcome* you expect; see
@@ -139,6 +149,16 @@ a return value against. Throw to fail, return nothing to pass:
     sensor('the alarm fired') { |state| raise 'no alarm' unless state[:alarm] }
     ```
   </TabItem>
+  <TabItem label="Go">
+    ```go
+    r.Sensor("the alarm fired", func(c Ctx) error {
+    	if !c.Alarm {
+    		return errors.New("no alarm")
+    	}
+    	return nil
+    })
+    ```
+  </TabItem>
 </Tabs>
 
 Returning any other value is a `ReturnShapeError`. This is deliberate: a
@@ -173,6 +193,11 @@ certainly believed it was being checked.
   <TabItem label="Ruby">
     ```ruby
     sensor('the total is {int}') { |state, _expected| state[:total] }
+    ```
+  </TabItem>
+  <TabItem label="Go">
+    ```go
+    r.Sensor("the total is {int}", func(c Ctx, expected int) int { return c.Total })
     ```
   </TabItem>
 </Tabs>
@@ -245,6 +270,24 @@ types whose `parse` produces an array:
     end
     ```
   </TabItem>
+  <TabItem label="Go">
+    ```go
+    type Ctx struct{ Dice []int }
+
+    r := oselvar.DefineState[Ctx]()
+    r.DefineParameterType("numbers", `\d+(?:, \d+)*`, func(args ...string) any {
+    	parts := strings.Split(args[0], ", ")
+    	nums := make([]int, len(parts))
+    	for i, p := range parts {
+    		nums[i], _ = strconv.Atoi(p)
+    	}
+    	return nums
+    }, nil)
+
+    // "The dice show 5, 6" — {numbers} transforms to [5, 6]
+    r.Sensor("The dice show {numbers}", func(c Ctx, dice []int) []int { return c.Dice })
+    ```
+  </TabItem>
 </Tabs>
 
 Because a single-slot return is always the bare value, `[5, 6]` here is
@@ -289,6 +332,13 @@ never mistaken for a two-slot positional array.
     end
     ```
   </TabItem>
+  <TabItem label="Go">
+    ```go
+    r.Sensor("I should have {int} cukes in my {word} belly", func(c Ctx, count int, belly string) []any {
+    	return []any{c.Count, c.BellyName}
+    })
+    ```
+  </TabItem>
 </Tabs>
 
 The array must have exactly one element per slot; a different length or a
@@ -324,6 +374,13 @@ last element:
   <TabItem label="Ruby">
     ```ruby
     sensor('Greet {word}:') { |_state, name, _doc| [name, "Hello, #{name}!\n"] }
+    ```
+  </TabItem>
+  <TabItem label="Go">
+    ```go
+    r.Sensor("Greet {word}:", func(c Ctx, name string, doc string) []any {
+    	return []any{name, "Hello, " + name + "!\n"}
+    })
     ```
   </TabItem>
 </Tabs>
@@ -379,6 +436,14 @@ returns a **row object** keyed by the header — not slots:
     sensor('a decimal and a roman number') do |_state, row|
       { 'decimal' => row['decimal'], 'roman' => RomanNumerals.to_roman(row['decimal'].to_i) }
     end
+    ```
+  </TabItem>
+  <TabItem label="Go">
+    ```go
+    r.Sensor("a decimal and a roman number", func(c Ctx, row map[string]string) map[string]string {
+    	decimal, _ := strconv.Atoi(row["decimal"])
+    	return map[string]string{"decimal": row["decimal"], "roman": toRoman(decimal)}
+    })
     ```
   </TabItem>
 </Tabs>

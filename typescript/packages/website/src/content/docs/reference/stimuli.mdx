@@ -65,6 +65,16 @@ with sensors.
     end
     ```
   </TabItem>
+  <TabItem label="Go">
+    ```go
+    type Ctx struct{ Total int }
+
+    r := oselvar.DefineState[Ctx]()
+
+    r.Stimulus("I add {int}", func(c Ctx, n int) Ctx { return Ctx{Total: c.Total + n} })
+    r.Sensor("the total is {int}", func(c Ctx, expected int) int { return c.Total })
+    ```
+  </TabItem>
 </Tabs>
 
 In your prose the stimulus covers both the *context* (arrange) and the *action*
@@ -133,6 +143,19 @@ full replacement, same principle: new value out, never mutation.
     end
     ```
   </TabItem>
+  <TabItem label="Go">
+    ```go
+    type Ctx struct {
+    	Greeting string
+    	Count    int
+    }
+
+    r := oselvar.DefineState[Ctx]()
+
+    r.Stimulus("I greet {string}", func(c Ctx, name string) Ctx { return Ctx{Greeting: "Hello, " + name + "!", Count: c.Count} })
+    r.Stimulus("I add {int}", func(c Ctx, n int) Ctx { return Ctx{Greeting: c.Greeting, Count: c.Count + n} })
+    ```
+  </TabItem>
 </Tabs>
 
 - **Returning nothing** leaves state unchanged — right for a stimulus whose
@@ -199,6 +222,17 @@ empty state they can ignore:
     end
     ```
   </TabItem>
+  <TabItem label="Go">
+    ```go
+    type Ctx struct{}
+
+    r := oselvar.DefineState[Ctx]()
+
+    r.Sensor("the square of {int} is {int}", func(c Ctx, n int, expected int) []any {
+    	return []any{n, n * n}
+    })
+    ```
+  </TabItem>
 </Tabs>
 
 ## Tables and doc strings
@@ -242,6 +276,17 @@ first), a doc string as its exact text:
     stimulus('these books exist:') do |_state, rows|
       { books: rows.drop(1).map { |title, author| { title: title, author: author } } }
     end
+    ```
+  </TabItem>
+  <TabItem label="Go">
+    ```go
+    r.Stimulus("these books exist:", func(c Ctx, rows [][]string) Ctx {
+    	books := make([]Book, 0, len(rows)-1)
+    	for _, row := range rows[1:] {
+    		books = append(books, Book{Title: row[0], Author: row[1]})
+    	}
+    	return Ctx{Books: books}
+    })
     ```
   </TabItem>
 </Tabs>

@@ -79,6 +79,21 @@ can use it as a `{name}` placeholder.
     end
     ```
   </TabItem>
+  <TabItem label="Go">
+    ```go
+    type Ctx struct{ Fee Money }
+
+    r := oselvar.DefineState[Ctx]()
+    r.DefineParameterType("money", `£\d+\.\d{2}`,
+    	func(args ...string) any {
+    		amount, _ := strconv.ParseFloat(strings.TrimPrefix(args[0], "£"), 64)
+    		return GBP(amount)
+    	},
+    	func(v any) string { return fmt.Sprintf("£%.2f", v.(Money).Value) })
+
+    r.Sensor("owes a {money} late fee", func(c Ctx, expected Money) Money { return c.Fee })
+    ```
+  </TabItem>
 </Tabs>
 
 This page is the reference for the three fields of a custom parameter type and

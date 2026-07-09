@@ -69,6 +69,14 @@ keyed by the header, and returns the computed columns:
     end
     ```
   </TabItem>
+  <TabItem label="Go">
+    ```go
+    r.Sensor("a decimal and a roman number", func(c Ctx, row map[string]string) map[string]string {
+    	decimal, _ := strconv.Atoi(row["decimal"])
+    	return map[string]string{"decimal": row["decimal"], "roman": toRoman(decimal)}
+    })
+    ```
+  </TabItem>
 </Tabs>
 
 Each row runs as its own check. If `toRoman(9)` returned `"VIIII"`, only the
@@ -129,6 +137,17 @@ Uppercase each one:
     end
     ```
   </TabItem>
+  <TabItem label="Go">
+    ```go
+    r.Sensor("Uppercase each one:", func(c Ctx, rows [][]string) []map[string]string {
+    	out := make([]map[string]string, 0, len(rows)-1)
+    	for _, row := range rows[1:] {
+    		out = append(out, map[string]string{"before": row[0], "after": strings.ToUpper(row[0])})
+    	}
+    	return out
+    })
+    ```
+  </TabItem>
 </Tabs>
 
 The table is this sensor's only comparable value, so it is returned bare. Vár
@@ -182,6 +201,13 @@ the text the software actually produces:
     sensor('Greet {word}:') { |_state, name, _doc| [name, "Hello, #{name}!\n"] }
     ```
   </TabItem>
+  <TabItem label="Go">
+    ```go
+    r.Sensor("Greet {word}:", func(c Ctx, name string, doc string) []any {
+    	return []any{name, "Hello, " + name + "!\n"}
+    })
+    ```
+  </TabItem>
 </Tabs>
 
 The comparison is exact equality, **including the trailing newline**. This step
@@ -217,6 +243,13 @@ whose doc string is its only comparable value returns the text bare:
   <TabItem label="Ruby">
     ```ruby
     sensor('Greet Bob:') { |_state, _doc| "Hello, Bob!\n" }
+    ```
+  </TabItem>
+  <TabItem label="Go">
+    ```go
+    r.Sensor("Greet Bob:", func(c Ctx, doc string) string {
+    	return "Hello, Bob!\n"
+    })
     ```
   </TabItem>
 </Tabs>
