@@ -72,6 +72,35 @@ func TestRegistryConformance(t *testing.T) {
 	}
 }
 
+func TestPlanConformance(t *testing.T) {
+	root := repoRoot(t)
+	for name, factory := range bundleFactories {
+		t.Run(name, func(t *testing.T) {
+			bundle := factory()
+			source, err := os.ReadFile(filepath.Join(root, "conformance", "bundles", name, "example.md"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			doc := varcore.Parse("example.md", string(source), nil)
+			plan, err := varcore.BuildPlan(doc, bundle.Registry)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := varcore.CanonicalStringify(varcore.ToPlanArtifact(plan))
+			if err != nil {
+				t.Fatal(err)
+			}
+			want, err := os.ReadFile(filepath.Join(root, "conformance", "bundles", name, "golden", "plan.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != string(want) {
+				t.Errorf("plan mismatch for %s\n--- got ---\n%s\n--- want ---\n%s", name, got, want)
+			}
+		})
+	}
+}
+
 // repoRoot walks up to the monorepo root (the dir containing conformance/bundles).
 func repoRoot(t *testing.T) string {
 	t.Helper()

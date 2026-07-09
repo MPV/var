@@ -38,6 +38,90 @@ func ToRegistryArtifact(r Registry) map[string]any {
 	}
 }
 
+// ToPlanArtifact projects an ExecutionPlan to the wire dict for the plan
+// artifact. Port of to_plan_artifact / toPlanArtifact. A step's args come from
+// its param spans (value = the source slice, parameterType = the name in source
+// order), not from the matched values.
+func ToPlanArtifact(plan ExecutionPlan) map[string]any {
+	source := plan.VarDoc.Source
+
+	stepMap := func(step PlannedStep) map[string]any {
+		names := parameterTypeNames(step.StepDef.Expression)
+		paramSpans := make([]any, len(step.ParamSpans))
+		args := make([]any, len(step.ParamSpans))
+		for i, sp := range step.ParamSpans {
+			paramSpans[i] = spanMap(sp)
+			var pt any
+			if i < len(names) {
+				pt = names[i]
+			}
+			args[i] = map[string]any{
+				"value":         utf16Slice(source, sp.StartOffset, sp.EndOffset),
+				"parameterType": pt,
+			}
+		}
+		m := map[string]any{
+			"text":              step.Text,
+			"matchSpan":         spanMap(step.MatchSpan),
+			"paramSpans":        paramSpans,
+			"matchedExpression": step.StepDef.Expression,
+			"args":              args,
+		}
+		if step.DataTable != nil {
+			m["dataTable"] = blockMap(*step.DataTable)
+		}
+		if step.DocString != nil {
+			m["docString"] = map[string]any{
+				"content":     step.DocString.Content,
+				"contentType": step.DocString.ContentType,
+				"span":        spanMap(step.DocString.Span),
+			}
+		}
+		return m
+	}
+
+	examples := make([]any, len(plan.Examples))
+	for i, ex := range plan.Examples {
+		scope := make([]any, len(ex.ScopeStack))
+		for j, s := range ex.ScopeStack {
+			scope[j] = s
+		}
+		steps := make([]any, len(ex.Steps))
+		for j, s := range ex.Steps {
+			steps[j] = stepMap(s)
+		}
+		outcome := ex.ExpectedOutcome
+		if outcome == "" {
+			outcome = "pass"
+		}
+		m := map[string]any{
+			"name":            ex.Name,
+			"scopeStack":      scope,
+			"span":            spanMap(ex.Span),
+			"expectedOutcome": outcome,
+			"steps":           steps,
+		}
+		if ex.ExpectedErrorMessage != nil {
+			m["expectedErrorMessage"] = *ex.ExpectedErrorMessage
+		}
+		examples[i] = m
+	}
+
+	diagnostics := make([]any, len(plan.Diagnostics))
+	for i, d := range plan.Diagnostics {
+		diagnostics[i] = map[string]any{
+			"code":     string(d.Code),
+			"severity": string(d.Severity),
+			"span":     spanMap(d.Span),
+		}
+	}
+
+	return map[string]any{
+		"examples":    examples,
+		"diagnostics": diagnostics,
+	}
+}
+
 func spanMap(s Span) map[string]any {
 	return map[string]any{
 		"startOffset": s.StartOffset,
