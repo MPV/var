@@ -44,10 +44,14 @@ module-for-module. Concretely:
 - The pure core reproduces every bundle's four conformance artifacts, the
   config corpus, and (unit-gated) the drift feature, byte-for-byte.
 - Go depends on the official **`github.com/cucumber/cucumber-expressions/go/v20`**
-  module — the same `20.0.0` line every other port pins — no hand-port of the
-  expression grammar. The `matcher` module ports only `var`'s own
-  hit-resolution and offset-shifting *around* the library, and reads
-  parameter-type names from the compiled expression AST.
+  module — the same `20.0.0` line every other port pins — used for regex
+  compilation and matching. The `matcher` module ports only `var`'s own
+  hit-resolution and offset-shifting *around* the library. **Caveat
+  (investigated 2026-07-09):** unlike the JS/Python/Java packages, the Go module
+  keeps its expression AST unexported, so parameter-type names cannot be read
+  from it; the port instead vendors cucumber-expressions' own upstream
+  tokenizer+parser (`ast.go`) into `varcore` to recover parameter nodes in
+  source order — the same algorithm, not a redesign (see the core design spec).
 
 ### Author-API forks (decided explicitly)
 

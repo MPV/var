@@ -84,6 +84,42 @@ separate modules. For Go, decide `deep_freeze` (Go returns by value — likely
 unneeded) and `expression_segments` (only needed if the cucumber-expressions AST
 route fails) during the relevant stage; do not port speculatively.
 
+## Registry stage — two Go-specific resolutions (investigated 2026-07-09)
+
+Two things fork from the Python/Java precedent and are settled here:
+
+1. **`parameterTypeNames` cannot use the library AST.** The Go module
+   `github.com/cucumber/cucumber-expressions/go/v20` (fetches cleanly, matches
+   the shared `20.0.0` pin) keeps its `parse`, AST `node` types, and the
+   `CucumberExpression.parameterTypes` field **all unexported** —
+   `NewCucumberExpression` returns an `Expression` interface exposing only
+   `Source()` and `Regexp()`. So the AST-walk every other port uses (and even
+   var's own `expression-segments.ts`, which reads `compiled.ast`) is
+   impossible in Go. **Resolution:** port cucumber-expressions' own
+   tokenizer + parser (its upstream, MIT-licensed `ast.go`) into `varcore` as
+   `expression_ast.go` to reconstruct parameter nodes in source order with
+   correct `\{`/`\}` escape handling — the *same upstream algorithm*, not a
+   redesign — and keep using the library for regex compilation/matching
+   (`Regexp()`, `Match()`). This is the fallback the skill anticipated
+   ("port only var's own logic around the library"). `expression_segments.go`
+   (needed by the matcher's offset-shifting) is then built on this ported AST.
+
+2. **Fixture layout — a `go.work` spanning `go/` and the co-located
+   fixtures.** Go is statically compiled (like Java) and cannot load a `.go`
+   step file at run time; and the required `*.steps.go` fixtures must live in
+   `conformance/bundles/<n>/` (outside the `go/` module), whose dir names
+   (`01-roman-numerals`) are invalid Go import-path segments only if used as
+   the *package name* — the package clause inside each file can differ from its
+   dir. **Resolution (mirrors Java's `build-helper` extra-source-root):** a
+   `go.work` at the repo root joins the `go/` module and a small
+   `conformance/` module (`github.com/oselvar/var/conformance`, `require`s
+   var-go); each bundle's `steps.go` declares `package bundleNN` and imports
+   the `var` facade; a registry-stage harness in the conformance module maps
+   bundle dir → fixture via an explicit switch (compiler-checked, like Java's
+   `loadFixture`) and gates `registry.json`/`plan.json`/`trace.json`. CI/Make
+   run with the workspace active (`GOWORK`), matching how `go test ./...` in
+   `go/` alone stays dependency-free for the pure-core stages.
+
 ## Author facade (`var` package)
 
 - `DefineState[S]` / `Registrar[S]`: the injected-registration API (ADR 0006).
